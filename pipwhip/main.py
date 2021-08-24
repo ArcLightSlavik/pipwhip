@@ -2,23 +2,28 @@ from __future__ import annotations
 
 import click
 import httpx
+
 from pkg_resources import parse_requirements
 from pkg_resources import parse_version
 from pkg_resources import Requirement
 
+from pipwhip.utils import coro
+
 
 @click.command()
+@coro
 @click.option(
     "-r",
     "--requirement",
     type=click.Path(),
 )
-def pipwhip(requirement: str) -> None:
-    execute(requirement)
+async def pipwhip(requirement: str) -> None:
+    await execute(requirement)
 
 
-def get_versions(package_name: str) -> tuple[str, list[str]]:
-    request = httpx.get(f"https://pypi.org/pypi/{package_name}/json")
+async def get_versions(package_name: str) -> tuple[str, list[str]]:
+    async with httpx.AsyncClient() as client:
+        request = await client.get(f"https://pypi.org/pypi/{package_name}/json")
 
     _version = request.json()["releases"]
     _name = request.json()["info"]["name"]
@@ -43,10 +48,10 @@ def erase_file_contents(requirements_file: str) -> None:
         f.close()
 
 
-def execute(requirements_file: str) -> None:
+async def execute(requirements_file: str) -> None:
     parsed_file = file_parse(requirements_file)
     erase_file_contents(requirements_file)
     for package in parsed_file:
-        result = get_versions(package.name)  # type: ignore
+        result = await get_versions(package.name)  # type: ignore
         latest_version = result[1][0]
         update_txt_file(requirements_file, result[0], latest_version)
