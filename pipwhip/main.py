@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import click
 import httpx
 from pkg_resources import parse_requirements
